@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}게시글 상세{% endblock %}
+
+{% block extra_css %}
+
+  <style>
+    .report-card { transition: all 0.3s; }
+    .report-card:hover { transform: translateY(-4px); }
+  </style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-8 py-12">
+  <div class="text-center mb-12">
+    <span class="inline-block px-4 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">2026년 3월 25일 작성</span>
+    <h1 class="text-5xl font-bold text-gray-800 mt-4">딸기 질병 진단 시스템<br>기술 연구 보고서</h1>
+    <p class="text-xl text-gray-600 mt-4 max-w-2xl mx-auto">
+      AI Hub 시설작물(딸기) 데이터셋 기반<br>
+      EfficientNet-B3 모델 학습 및 Baseline 결과 보고
+    </p>
+  </div>
+
+  <!-- 진행 현황 -->
+  <div class="bg-white rounded-3xl shadow p-8 mb-12">
+    <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+      <i class="fas fa-flag-checkered text-green-600"></i> 현재 진행 현황
+    </h2>
+    <div class="grid md:grid-cols-5 gap-6">
+      <div class="text-center flex flex-col items-center">
+        <div class="text-green-600 text-5xl mb-2 flex flex-col items-center">
+          <img src='https://i.ifh.cc/fl9LYW.png' width="63px" border='0'>
+        </div>
+        <p class="font-medium">데이터 준비</p>
+        <p class="text-xs text-gray-500">완료</p>
+      </div>
+      <div class="text-center flex flex-col items-center">
+        <div class="text-green-600 text-5xl mb-2 flex flex-col items-center">
+          <img src='https://i.ifh.cc/fl9LYW.png' width="63px" border='0'>
+        </div>
+        <p class="font-medium">데이터 세팅</p>
+        <p class="text-xs text-gray-500">완료</p>
+      </div>
+      <div class="text-center flex flex-col items-center">
+        <div class="text-green-600 text-5xl mb-2 flex flex-col items-center">
+          <img src='https://i.ifh.cc/fl9LYW.png' width="63px" border='0'>
+        </div>
+        <p class="font-medium">EDA</p>
+        <p class="text-xs text-gray-500">완료</p>
+      </div>
+      <div class="text-center flex flex-col items-center">
+        <div class="text-green-600 text-5xl mb-2 flex flex-col items-center">
+          <img src='https://i.ifh.cc/fl9LYW.png' width="63px" border='0'>
+        </div>
+        <p class="font-medium">전처리</p>
+        <p class="text-xs text-gray-500">HSV 마스킹 적용</p>
+      </div>
+      <div class="text-center bg-green-50 rounded-2xl p-4 ring-2 ring-green-600">
+        <div class="text-green-600 text-5xl mb-2 flex flex-col items-center">
+          <img src='https://i.ifh.cc/ZZfM7z.png' width="63px" border='0'>
+        </div>
+        <p class="font-medium text-green-700">모델 학습 (Baseline)</p>
+        <p class="text-3xl font-bold text-green-700 mt-2">95.60%</p>
+        <p class="text-xs text-green-600">Val Accuracy</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 핵심 성과 -->
+  <div class="grid md:grid-cols-2 gap-8 mb-12">
+    <div class="bg-white rounded-3xl p-8 report-card">
+      <li class="flex gap-3 items-start">
+        <span class="text-2xl text-green-500"><img src='https://i.ifh.cc/PJQcsB.png' width="30px" border='0'></span>
+        <h3 class="text-xl font-semibold mb-4">Baseline 결과</h3>
+      </li>
+      <div class="bg-gray-50 rounded-2xl p-6 text-center">
+        <p class="text-6xl font-bold text-green-600">95.60%</p>
+        <p class="text-gray-500 mt-2">Validation Accuracy</p>
+        <p class="text-sm text-gray-400 mt-1">(CPU / 1,000장 / 3에폭)</p>
+      </div>
+      <p class="mt-6 text-sm leading-relaxed text-gray-600">
+        제한된 조건에서도 높은 성능을 보였으며,<br>
+        전체 데이터(172,037장) + 20에폭 학습 시 97~99% 기대
+      </p>
+    </div>
+    
+    <div class="bg-white rounded-3xl p-8 report-card">
+      <li class="flex gap-3 items-start mb-6">
+        <span class="text-2xl text-green-500"><img src='https://i.ifh.cc/WQnMJw.png' width="30px" border='0'></span>
+        <h3 class="text-xl font-semibold mb-4">주요 기술 스택</h3>
+      </li>
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500">모델</span><span class="font-medium">EfficientNet-B3</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">프레임워크</span><span class="font-medium">PyTorch 2.11</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">전처리</span><span class="font-medium">OpenCV + bbox crop</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">설명 가능성</span><span class="font-medium">Grad-CAM</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">불균형 처리</span><span class="font-medium">WeightedRandomSampler</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">웹 프레임워크</span><span class="font-medium">Django 6.x</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 데이터셋 요약 -->
+  <div class="bg-white rounded-3xl p-8 mb-12">
+    <li class="flex gap-3 items-start">
+      <img src='https://i.ifh.cc/b7hL65.png' width="30px" border='0'>
+      <h3 class="text-xl font-semibold mb-6">데이터셋 요약 (AI Hub 2022 설향)</h3>
+    </li>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+      <div class="text-center bg-green-50 rounded-2xl p-5">
+        <p class="text-3xl font-bold text-green-700">66,861</p>
+        <p class="text-sm text-gray-600">정상</p>
+      </div>
+      <div class="text-center bg-amber-50 rounded-2xl p-5">
+        <p class="text-3xl font-bold text-amber-700">42,784</p>
+        <p class="text-sm text-gray-600">시들음병</p>
+      </div>
+      <div class="text-center bg-red-50 rounded-2xl p-5">
+        <p class="text-3xl font-bold text-red-700">30,518</p>
+        <p class="text-sm text-gray-600">역병</p>
+      </div>
+      <div class="text-center bg-orange-50 rounded-2xl p-5">
+        <p class="text-3xl font-bold text-orange-700">17,906</p>
+        <p class="text-sm text-gray-600">잎끝마름</p>
+      </div>
+      <div class="text-center bg-yellow-50 rounded-2xl p-5">
+        <p class="text-3xl font-bold text-yellow-700">13,968</p>
+        <p class="text-sm text-gray-600">황화</p>
+      </div>
+    </div>
+    <p class="text-center text-xs text-gray-500 mt-6">총 172,037장 • 정상 vs 황화 = 4.8배 불균형</p>
+  </div>
+
+  <!-- 다음 단계 -->
+  <div class="bg-gradient-to-r from-green-700 to-red-600 text-white rounded-3xl p-10 text-center">
+    <h3 class="text-2xl font-semibold mb-3">다음 연구 단계</h3>
+    <p class="max-w-lg mx-auto">
+      ⑥ 전체 데이터 학습 (20에폭)<br>
+      ⑦ Grad-CAM 고도화 및 Django 웹앱 연동<br>
+      ⑧ MariaDB + Docker 배포
+    </p>
+    <div class="mt-8 inline-flex items-center gap-2 bg-white/20 px-6 py-3 rounded-2xl text-sm">
+      <span class="animate-pulse">●</span>
+      현재 Baseline 완료 • 전체 학습 진행 예정
+    </div>
+  </div>
+</div>
+
+{% endblock %}

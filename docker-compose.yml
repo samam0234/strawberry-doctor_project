@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: strawberry_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  back:
+    build: ./back
+    container_name: strawberry_back
+    restart: always
+    env_file:
+      - ./back/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./back:/app
+      - ./ml:/app/../ml
+    depends_on:
+      - db
+
+  front:
+    build: ./front
+    container_name: strawberry_front
+    restart: always
+    env_file:
+      - ./front/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./front:/app
+    depends_on:
+      - back
+
+volumes:
+  db_data:
+

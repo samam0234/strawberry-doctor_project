@@ -1,0 +1,407 @@
+{% extends '../base.html' %}
+{% block title %}진단하기{% endblock %}
+
+{% block extra_css %}
+
+  <!-- Cropper.js CDN (드래그 영역 선택용) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  <style>
+    .step-card { transition: all 0.3s; }
+    .step-card:hover { transform: translateY(-5px); }
+    .heatmap-overlay { position: relative; }
+    .heatmap-overlay img { position: absolute; top: 0; left: 0; }
+    #preview-image { max-height: 400px; }
+
+    .main_title {
+      display: flex;
+      align-items: center;     /* 세로 중앙 정렬 (이미지와 h1 높이가 달라도 예쁘게) */
+      gap: 3px;               /* ← 여기서 원하는 거리(간격)만 정확히 설정! */
+      margin-bottom: 6px;     /* 항목 간 세로 간격 */
+      justify-content: center;  /* ← 이 한 줄이 핵심! */
+    }
+
+    #strawberry_icon {
+      flex-shrink: 0;          /* 이미지가 줄어들지 않게 */
+    } 
+  </style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-6xl mx-auto p-8">
+  <div class="main_title">
+    <img id="strawberry_icon" width="70px" src="https://png.pngtree.com/recommend-works/png-clipart/20251104/ourmid/pngtree-strawberry-icon-png-image_17777340.webp">
+    <h1 id="h1_text" class="text-4xl font-bold text-center text-green-700 mb-2">딸기 진단하기</h1>
+  </div>
+  <p class="text-center text-gray-600 mb-10">설향 딸기 잎 이미지를 분석하여 질병을 진단합니다</p>
+  <!-- 1. 이미지 업로드 -->
+  <div class="bg-white rounded-2xl shadow-lg p-8 mb-10">
+    <h2 class="text-2xl font-semibold mb-6 text-center">1. 딸기 잎 이미지 업로드</h2>
+    <div class="flex justify-center">
+      <label id="upload-area" class="w-96 h-96 border-4 border-dashed border-green-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-colors">
+        <input type="file" id="image-upload" accept="image/*" class="hidden">
+        <div id="preview" class="hidden w-full h-full rounded-2xl overflow-hidden relative">
+          <img id="preview-image" class="w-full h-full object-contain">
+        </div>
+        <div id="upload-text" class="text-center">
+          <span class="text-6xl mb-4 block">📸</span>
+          <p class="text-xl font-medium text-green-700">이미지를 여기에 끌어다 놓거나 클릭하세요</p>
+          <p class="text-sm text-gray-500 mt-2">JPG, PNG 지원 (설향 딸기 잎 추천)</p>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- 영역 선택 및 분석 버튼 -->
+  <div id="crop-section" class="hidden mb-10">
+    <h2 class="text-2xl font-semibold mb-4 text-center">2. 분석할 부위를 드래그로 선택하세요</h2>
+    <div class="flex justify-center">
+      <div class="relative">
+        <img id="crop-image" class="max-h-[500px] rounded-2xl shadow">
+      </div>
+    </div>
+    <div class="text-center mt-6">
+      <button onclick="startAnalysis()" 
+              class="px-10 py-4 bg-green-600 text-white text-xl font-medium rounded-3xl hover:bg-green-700 transition-colors">
+        선택한 부위 분석하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 처리 단계들 (Grad-CAM + 결과) -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="steps" style="display: none;">
+    <!-- Step 1: Grad-CAM -->
+    <div class="step-card bg-white rounded-2xl shadow-lg p-6">
+      <h3 class="text-xl font-bold text-green-600 mb-4">① Grad-CAM 히트맵</h3>
+    <div class="aspect-square bg-gray-100 rounded-xl overflow-hidden border">
+      <img id="gradcam-image" class="w-full h-full object-cover">
+    </div>
+      <p class="text-xs text-gray-500 mt-3 text-center">모델이 집중한 병반 부위</p>
+    </div>
+
+    <!-- Step 2: 진단 결과 -->
+    <div class="step-card bg-white rounded-2xl shadow-lg p-6 col-span-2">
+      <h3 class="text-xl font-bold text-green-600 mb-4">② 진단 결과</h3>
+      
+      <div id="result-box" class="p-6 bg-green-50 rounded-2xl text-center hidden">
+        <div id="disease-name" class="text-3xl font-bold mb-2"></div>
+        <div id="confidence" class="text-5xl font-black text-green-600 mb-6"></div>
+
+        <!-- ✅ 클래스별 확률 텍스트 -->
+        <div id="prob-text" class="text-left bg-white p-4 rounded-xl mb-4 text-sm">
+          <p class="font-semibold text-gray-600 mb-2">📊 클래스별 확률</p>
+          <div id="prob-list" class="space-y-1"></div>
+        </div>
+
+        <!-- ✅ 바 차트 -->
+        <div class="bg-white p-4 rounded-xl mb-6" style="height: 220px;">
+          <canvas id="training-prob-chart"></canvas>
+        </div>
+
+        <div class="flex gap-3 justify-center">
+          <button onclick="viewHistory()" class="px-6 py-3 bg-white border border-green-600 text-green-700 rounded-2xl font-medium hover:bg-green-50 flex items-center gap-2">
+            <i class="fas fa-history"></i> 진단 이력 보기
+          </button>
+          <button onclick="newDiagnosis()" class="px-6 py-3 bg-green-600 text-white rounded-2xl font-medium hover:bg-green-700">
+            새 이미지 진단하기
+          </button>
+        </div>
+      </div>
+
+      <!-- 신뢰도 필터링 결과 -->
+      <div id="uncertain-result" class="hidden p-8 bg-yellow-100 rounded-3xl text-center border border-yellow-400">
+        <div class="text-6xl mb-4">⚠️</div>
+        <h3 class="text-2xl font-bold text-yellow-700 mb-2">불확실합니다</h3>
+        <p class="text-yellow-600 text-lg">70~85% 신뢰도<br>조금 더 선명하게 다시 촬영해주세요</p>
+        <button onclick="resetUpload()" class="mt-6 px-8 py-3 bg-yellow-600 text-white rounded-2xl font-medium">다시 업로드하기</button>
+      </div>
+
+      <div id="error-result" class="hidden p-8 bg-red-100 rounded-3xl text-center border border-red-400">
+        <div class="text-6xl mb-4">❌</div>
+        <h3 class="text-2xl font-bold text-red-700 mb-2">딸기 잎이 아닙니다</h3>
+        <p class="text-red-600 text-lg">70% 미만 신뢰도<br>딸기 잎 사진으로 다시 시도해주세요</p>
+        <button onclick="resetUpload()" class="mt-6 px-8 py-3 bg-red-600 text-white rounded-2xl font-medium">다시 업로드하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<!-- Cropper.js CDN (드래그 영역 선택용) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<!-- Chart.jsCDN 추가 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Cropper.js 변수
+let cropper = null;
+
+// 업로드 이벤트
+document.getElementById('image-upload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    // 업로드 영역 숨기고 crop 영역 표시
+    document.getElementById('upload-area').classList.add('hidden');
+    const cropSection = document.getElementById('crop-section');
+    cropSection.classList.remove('hidden');
+
+    const cropImage = document.getElementById('crop-image');
+    cropImage.src = event.target.result;
+
+    // Cropper.js 초기화
+    if (cropper) cropper.destroy();
+    cropper = new Cropper(cropImage, {
+      aspectRatio: NaN,        // 자유 비율
+      viewMode: 1,
+      autoCropArea: 0.8,
+      responsive: true,
+    });
+  };
+  reader.readAsDataURL(file);
+});
+
+// 분석 시작 버튼
+function startAnalysis() {
+  const LABEL_KO = {
+  'normal':        '정상',
+  'phytophthora':  '역병',
+  'wilt':          '시들음병',
+  'tipburn':       '잎끝마름',
+  'yellowing':     '황화',
+};
+
+  if (!cropper) {
+    alert('이미지를 먼저 선택해주세요.');
+    return;
+  }
+
+  const croppedCanvas = cropper.getCroppedCanvas();
+
+  // UI 먼저 전환
+  document.getElementById('crop-section').classList.add('hidden');
+  document.getElementById('steps').style.display = 'grid';
+  document.getElementById('result-box').classList.add('hidden');
+  document.getElementById('uncertain-result').classList.add('hidden');
+  document.getElementById('error-result').classList.add('hidden');
+
+  // toBlob()으로 실제 파일 만들기
+  croppedCanvas.toBlob(async function(blob) {
+    const formData = new FormData();
+    formData.append('image', blob, 'cropped.jpg');  // ← blob으로 변경
+
+    // ✅ 크롭한 원본 이미지를 업로드 영역에 표시
+    const croppedDataUrl = croppedCanvas.toDataURL();
+    const uploadArea = document.getElementById('upload-area');
+    uploadArea.classList.remove('hidden');
+    uploadArea.innerHTML = `
+      <img src="${croppedDataUrl}" class="w-full h-full object-contain rounded-2xl">
+    `;
+
+    try {
+      const response = await fetch('http://192.168.0.56:8001/api/predict/', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('서버 응답 오류: ' + response.status);
+      const result = await response.json();
+      console.log('서버 응답:', result);  // ← 이걸 추가
+      console.log('probabilities:', result.probabilities);
+
+      const confidence = result.confidence;
+
+      if (confidence >= 85) {
+        document.getElementById('result-box').classList.remove('hidden');
+        document.getElementById('disease-name').textContent = result.result_ko || LABEL_KO[result.result] || result.result;
+        document.getElementById('confidence').textContent = confidence + '%';
+        
+        // ✅ 차트 + 텍스트 렌더링
+        if (result.probabilities) {
+          renderTrainingChart(result.probabilities);
+        }
+
+        // ✅ gradcam URL 통일 (8001로)
+        const gradcamUrl = 'http://192.168.0.56:8001' + result.gradcam_image + '?t=' + Date.now();
+        document.getElementById('gradcam-image').src = gradcamUrl;
+
+        // 이미지 압축 후 저장 (toDataURL 대신 quality 0.3으로 압축)
+        const compressedImage = croppedCanvas.toDataURL('image/jpeg', 0.3);     // 원본 이미지 (모달 왼쪽)
+
+        // ★★★ saveToHistory는 이제 1번만 호출 ★★★
+        saveToHistory(
+          LABEL_KO[result.result] || result.result,  // 한국어 병명
+          confidence,
+          compressedImage,                             // ← 압축된 이미지                 
+          gradcamUrl,                                 // Grad-CAM URL (목록 썸네일 + 모달 오른쪽)
+          result.probabilities
+        );
+
+        localStorage.setItem('latest_gradcam', gradcamUrl);
+
+        // latest_gradcam도 한 번만 저장
+        // localStorage.setItem('latest_gradcam', 'http://127.0.0.1:8100' + result.gradcam_image);
+        // saveToHistory(LABEL_KO[result.result] || result.result, confidence, gradcamUrl, '');
+        
+        // ✅ 이 줄 추가 — index.html의 Overview 섹션에서 읽어감
+        localStorage.setItem('latest_gradcam', 'http://192.168.0.56:8001' + result.gradcam_image);
+      } else if (confidence >= 70) {
+        document.getElementById('uncertain-result').classList.remove('hidden');
+      } else {
+        document.getElementById('error-result').classList.remove('hidden');
+      }
+
+    // } catch (err) {
+      // console.error(err);
+      // alert('진단 중 오류가 발생했습니다. back 서버가 켜져 있는지 확인해주세요.');
+    // }
+    } catch (err) {
+       console.error('에러 상세:', err.message, err);  // ← 이렇게 수정
+    //  alert('진단 중 오류가 발생했습니다. back 서버가 켜져 있는지 확인해주세요.');
+    }
+  }, 'image/jpeg');
+}
+
+// 재업로드
+function resetUpload() {
+  location.reload();
+}
+
+// 이력 저장 함수
+function saveToHistory(disease, confidence, imageBase64, gradcam, probabilities) {
+  const STORAGE_KEY = 'strawberry_doctor_history';
+  let historyData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const newRecord = {
+    id: Date.now(),
+    date: new Date().toLocaleString('ko-KR', { 
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+     }),
+    image: imageBase64,
+    gradcam: gradcam,        // ← gradcam 필드 추가
+    disease: disease,
+    confidence: confidence,
+    probabilities: probabilities  // ← probabilities 필드 추가
+  };
+  historyData.unshift(newRecord);
+
+  // ✅ 최대 20개까지만 저장 (오래된 것 자동 삭제)
+  if (historyData.length > 50) {
+    historyData = historyData.slice(0, 20);
+  }
+
+  // ✅ 저장 실패 시 오래된 것부터 하나씩 제거 후 재시도
+  while (historyData.length > 0) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(historyData));
+      break;
+    } catch (e) {
+      historyData.pop();  // 가장 오래된 것 제거 후 재시도
+    }
+  }
+}
+
+function viewHistory() { window.location.href = '/history/'; }
+function newDiagnosis() { location.reload(); }
+
+// ==================== 드래그 앤 드롭 기능 추가 (여기에 넣으세요) ====================
+const uploadArea = document.getElementById('upload-area');
+const imageUpload = document.getElementById('image-upload');
+
+if (uploadArea) {
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#10b981';
+        uploadArea.style.backgroundColor = '#f0fdf4';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.borderColor = '#86efac';
+        uploadArea.style.backgroundColor = '';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#86efac';
+        uploadArea.style.backgroundColor = '';
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            imageUpload.files = dt.files;
+
+            const event = new Event('change');
+            imageUpload.dispatchEvent(event);
+        } else {
+            alert('이미지 파일만 업로드 가능합니다.');
+        }
+    });
+}
+// ==================== 드래그 앤 드롭 코드 끝 ====================
+
+function renderTrainingChart(probabilities) {
+  const LABEL_KO = {
+    normal: '정상', phytophthora: '역병',
+    wilt: '시들음병', tipburn: '잎끝마름', yellowing: '황화'
+  };
+  const COLORS = {
+    normal: '#10b981', phytophthora: '#ef4444',
+    wilt: '#f59e0b', tipburn: '#f97316', yellowing: '#eab308'
+  };
+
+  // ✅ 텍스트 목록
+  const probList = document.getElementById('prob-list');
+  probList.innerHTML = '';
+  Object.entries(probabilities)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([key, val]) => {
+      probList.innerHTML += `
+        <div class="flex justify-between items-center">
+          <span class="text-gray-600">${LABEL_KO[key] || key}</span>
+          <span class="font-bold" style="color:${COLORS[key] || '#6b7280'}">${val.toFixed(1)}%</span>
+        </div>`;
+    });
+
+  // ✅ 바 차트
+  const ctx = document.getElementById('training-prob-chart');
+  if (window.trainingChart) window.trainingChart.destroy();
+
+  const keys = ['normal', 'phytophthora', 'wilt', 'tipburn', 'yellowing'];
+  window.trainingChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: keys.map(k => LABEL_KO[k]),
+      datasets: [{
+        data: keys.map(k => probabilities[k] || 0),
+        backgroundColor: keys.map(k => COLORS[k]),
+        borderRadius: 6,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100,
+          ticks: { callback: v => `${v}%` }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+</script>
+
+{% endblock %}

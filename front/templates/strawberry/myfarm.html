@@ -1,0 +1,251 @@
+{% extends '../base.html' %}
+{% block title %}게시글 상세{% endblock %}
+
+{% block extra_css %}
+
+  <style>
+    .status-card { transition: all 0.3s; }
+    .status-card:hover { transform: translateY(-6px); }
+  </style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-8 py-10">
+  <div class="flex justify-between items-end mb-10">
+    <div>
+      <h1 class="text-4xl font-bold text-green-800">내 농장 대시보드</h1>
+      <p class="text-gray-600 mt-2">2026년 3월 30일 기준 • 설향 품종 온실 1동</p>
+    </div>
+    <div class="text-right">
+      <div class="text-sm text-gray-500">전체 농장 건강 점수</div>
+      <div id="health-score" class="text-6xl font-bold text-green-600">100<span class="text-2xl">/100</span></div>
+    </div>
+  </div>
+
+  <!-- 환경 센서 카드 -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+    <div class="status-card bg-white rounded-3xl p-6 shadow">
+      <div class="flex justify-between">
+        <div>
+          <p class="text-sm text-gray-500">온도</p>
+          <p class="text-4xl font-semibold">22.4°C</p>
+        </div>
+        <i class="fas fa-thermometer-half text-5xl text-orange-400"></i>
+      </div>
+      <p class="text-xs text-green-600 mt-4">적정 범위 (18~25°C)</p>
+    </div>
+    <div class="status-card bg-white rounded-3xl p-6 shadow">
+      <div class="flex justify-between">
+        <div>
+          <p class="text-sm text-gray-500">습도</p>
+          <p class="text-4xl font-semibold">68%</p>
+        </div>
+        <i class="fas fa-tint text-5xl text-blue-400"></i>
+      </div>
+      <p class="text-xs text-green-600 mt-4">적정 범위 (60~75%)</p>
+    </div>
+    <div class="status-card bg-white rounded-3xl p-6 shadow">
+      <div class="flex justify-between">
+        <div>
+          <p class="text-sm text-gray-500">EC (전기전도도)</p>
+          <p class="text-4xl font-semibold">1.8</p>
+        </div>
+        <i class="fas fa-bolt text-5xl text-yellow-400"></i>
+      </div>
+      <p class="text-xs text-amber-600 mt-4">약간 높음 • 모니터링 필요</p>
+    </div>
+    <div class="status-card bg-white rounded-3xl p-6 shadow">
+      <div class="flex justify-between">
+        <div>
+          <p class="text-sm text-gray-500">pH</p>
+          <p class="text-4xl font-semibold">6.2</p>
+        </div>
+        <i class="fas fa-vial text-5xl text-purple-400"></i>
+      </div>
+      <p class="text-xs text-green-600 mt-4">적정 범위 (5.5~6.5)</p>
+    </div>
+  </div>
+
+<!-- 생육 상태 -->
+<div class="grid md:grid-cols-2 gap-8 mb-12">
+  <!-- 생육 단계 분포 (그래프가 들어갈 카드) -->
+  <div class="bg-white rounded-3xl p-8 shadow">
+    <h3 class="font-semibold text-xl mb-6 flex items-center gap-2">
+      <i class="fas fa-leaf"></i> 생육 단계 분포
+    </h3>
+    
+    <!-- 높이 강제 고정 + canvas -->
+    <div class="h-64 bg-gray-50 rounded-2xl flex items-center justify-center border border-dashed border-gray-200">
+      <canvas id="growthChart" class="w-full h-full"></canvas>
+    </div>
+  </div>
+
+  <!-- 평균 생육 지수 (기존 그대로) -->
+  <div class="bg-white rounded-3xl p-8 shadow">
+    <h3 class="font-semibold text-xl mb-6">평균 생육 지수</h3>
+    <div class="grid grid-cols-3 gap-6 mt-12">
+      <div class="text-center">
+        <p class="text-sm text-gray-500">줄기 길이</p>
+        <p class="text-4xl font-bold text-green-700">38cm</p>
+      </div>
+      <div class="text-center">
+        <p class="text-sm text-gray-500">잎 수</p>
+        <p class="text-4xl font-bold text-green-700">6.8</p>
+      </div>
+      <div class="text-center">
+        <p class="text-sm text-gray-500">잎 너비</p>
+        <p class="text-4xl font-bold text-green-700">8.7cm</p>
+      </div>
+    </div>
+    <div class="mt-8 text-sm text-amber-600 bg-amber-50 p-4 rounded-2xl">
+      <strong>주의:</strong> 최근 황화 발생률 12% ↑ • 질소 공급을 검토하세요.
+    </div>
+  </div>
+</div>
+
+  <!-- 최근 진단 기록 -->
+  <div>
+    <h3 class="font-semibold text-xl mb-6 flex items-center gap-2">
+      <i class="fas fa-history"></i> 최근 진단 기록 (최근 7일)
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="recent-diagnoses">
+      <!-- JavaScript로 동적으로 채움 -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+
+
+// ==================== 건강 점수 계산 (가중치 + 최근 7일 평균) ====================
+  function calculateHealthScore(history) {
+    if (!history || history.length === 0) {
+      console.log(' "not score = default score" = "100score" ');
+      return 100;
+    }
+
+    // 질병별 가중치 (점수)
+    const weights = {
+      '정상': 100,
+      '황화': 70,
+      '잎끝마름': 60,
+      '시들음병': 40,
+      '역병': 30
+    };
+
+    // 최근 7일 데이터만 필터링
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    const recentHistory = history.filter(item => {
+      const itemDate = new Date(item.date.replace(/\./g, '-').replace(' ', 'T'));
+      return itemDate >= sevenDaysAgo;
+    });
+
+    // 최근 7일 데이터가 없으면 전체 데이터로 fallback
+    const targetHistory = recentHistory.length > 0 ? recentHistory : history;
+
+    let totalScore = 0;
+    targetHistory.forEach(item => {
+      const score = weights[item.disease] || 50;   // 모르는 질병은 50점
+      totalScore += score;
+    });
+
+    const averageScore = Math.round(totalScore / targetHistory.length);
+
+    console.log(`[건강점수] 최근 7일 ${recentHistory.length}건 | 평균 ${averageScore}점`);
+
+    return Math.max(0, Math.min(100, averageScore));
+  }
+
+  // ==================== 점수 업데이트 ====================
+  function updateHealthScore() {
+    const history = JSON.parse(localStorage.getItem('strawberry_doctor_history') || '[]');
+    const score = calculateHealthScore(history);
+    const scoreEl = document.getElementById('health-score');
+    if (scoreEl) {
+      scoreEl.innerHTML = `${score}<span class="text-2xl">/100</span>`;
+      if (score >= 80) scoreEl.className = "text-6xl font-bold text-green-600";
+      else if (score >= 50) scoreEl.className = "text-6xl font-bold text-amber-600";
+      else scoreEl.className = "text-6xl font-bold text-red-600";
+    }
+  }
+
+  // ==================== 최근 진단 기록 ====================
+  function loadRecentDiagnoses() {
+    const history = JSON.parse(localStorage.getItem('strawberry_doctor_history') || '[]');
+    const container = document.getElementById('recent-diagnoses');
+    if (!container) return;
+    container.innerHTML = '';
+
+    history.slice(0, 3).forEach(item => {
+      const div = document.createElement('div');
+      div.className = "bg-white rounded-3xl p-6 shadow flex gap-4";
+      div.innerHTML = `
+        <img src="${item.image}" class="w-20 h-20 object-cover rounded-2xl">
+        <div class="flex-1">
+          <div class="flex justify-between">
+            <span class="font-medium ${item.disease === '정상' ? 'text-green-600' : 'text-red-600'}">${item.disease}</span>
+            <span class="text-xs text-gray-500">${item.date}</span>
+          </div>
+          <p class="text-sm text-gray-600 mt-1 line-clamp-2">${item.explanation || ''}</p>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+    updateHealthScore();   // 점수 업데이트
+  }
+
+// ==================== 생육 단계 도넛 그래프 ====================
+  function initGrowthChart() {
+    const ctx = document.getElementById('growthChart');
+    if (!ctx) {
+      console.error('growthChart 캔버스를 찾을 수 없습니다.');
+      return;
+    }
+
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['정식기', '생육기', '개화기', '착과기', '수확기'],
+        datasets: [{
+          data: [25, 40, 15, 12, 8],
+          backgroundColor: ['#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',                    // 도넛 두께 조절
+        plugins: {
+          legend: { 
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 20, font: { size: 13 } }
+          }
+        }
+      }
+    });
+    console.log('생육 단계 도넛 그래프 정상 렌더링 완료');
+  }
+
+  // ==================== 페이지 로드 시 모든 초기화 실행 ====================
+  window.addEventListener('load', () => {
+    loadRecentDiagnoses();
+    initGrowthChart();        // ← 도넛 그래프 초기화
+  });
+
+// ----------------------------------------------
+
+
+</script>
+
+{% endblock %}

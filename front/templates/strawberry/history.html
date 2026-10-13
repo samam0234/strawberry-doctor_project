@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% block title %}게시글 상세{% endblock %}
+
+
+{% block extra_css%}
+  <style>
+    .history-card { 
+      transition: all 0.3s; 
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .history-card:hover { 
+      transform: translateY(-4px); 
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); 
+    }
+
+    /* 카드 목록 썸네일 - 기존 그대로 유지 */
+    .thumbnail {
+      width: 100% !important;
+      height: 240px !important;
+      object-fit: cover !important;
+      object-position: center !important;
+      transition: all 0.3s;
+    }
+
+    .history-card:hover .thumbnail { 
+      transform: scale(1.05); 
+    }
+
+    /* 모달 크기 크게 확대 */
+    #modal-content {
+      max-width: 1100px !important;     /* 좌우 폭 크게 */
+      max-height: 110vh !important;      /* 높이 더 크게 */
+    }
+
+    /* 내용 영역 여백과 스크롤 조정 */
+    #pdf-content {
+      padding: 24px;
+      max-height: calc(92vh - 80px);
+    }
+
+    /* 이미지 두 장 나란히 배치될 때 예쁘게 */
+    #modal-image,
+    #modal-gradcam {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain !important;   /* ← 잘리지 않게 */
+      background: #f8fafc;
+      border-radius: 16px;
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    }
+
+    /* 모달 이미지만 별도로 높이 제한 */
+    /* #modal-image {
+      width: 150%;
+      height: 200px;
+      object-fit: cover;
+      object-position: center;
+      border-radius: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    } */
+
+    /* 모달 전체 높이 제한 (화면 85% 이하) */
+    #detail-modal .bg-white {
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    /* 내용 영역 높이 제한 (스크롤 가능) */
+    #pdf-content {
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    /* 모달 안 flex 영역을 더 넓게 */
+    #pdf-content > .flex {
+      gap: 20px;
+    }
+
+    /* 차트 컨테이너 높이 고정 (적당한 크기) */
+    #probability-chart {
+      height: 260px;
+      margin-top: 16px;
+    }
+
+    /* 차트 캔버스 크기 조절 */
+    #prob-bar-chart {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-6xl mx-auto p-8">
+  <div class="flex justify-between items-end mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">진단 이력</h1>
+      <p class="text-gray-600 mt-1">총 <span id="total-count" class="font-semibold text-green-600">0</span>건의 진단 기록</p>
+    </div>
+    <button onclick="clearAllHistory()" class="px-5 py-2.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center gap-2">
+      <i class="fas fa-trash"></i> 전체 삭제
+    </button>
+  </div>
+
+  <!-- 검색 & 필터 -->
+  <div class="bg-white p-4 rounded-2xl shadow mb-8 flex gap-4">
+    <div class="flex-1 relative">
+      <input id="search-input" type="text" placeholder="질병명 또는 날짜 검색..." class="w-full pl-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500">
+      <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+    </div>
+    <select id="filter-class" class="px-5 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500">
+      <option value="">전체 클래스</option>
+      <option value="정상">정상</option>
+      <option value="역병">역병</option>
+      <option value="시들음병">시들음병</option>
+      <option value="잎끝마름">잎끝마름</option>
+      <option value="황화">황화</option>
+    </select>
+  </div>
+  
+  <!-- 이력 리스트 -->
+  <div id="history-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  
+  <!-- 빈 상태 -->
+  <div id="empty-state" class="hidden text-center py-20">
+    <div class="text-7xl mb-6">📭</div>
+    <p class="text-xl text-gray-500">아직 진단 기록이 없습니다.</p>
+    <a href="/training/" class="mt-6 inline-block px-8 py-3 bg-green-600 text-white rounded-2xl font-medium hover:bg-green-700">지금 진단하러 가기 →</a>
+  </div>
+</div>
+
+<!-- 상세 보기 모달 -->
+<div id="detail-modal" class="hidden fixed inset-0 bg-black/70 items-center justify-center z-[100]">
+  <div class="bg-white rounded-3xl shadow-2xl 
+              max-w-5xl w-full mx-4 max-h-[92vh] flex flex-col" 
+       id="modal-content">
+    
+    <!-- 스크롤 가능한 내용 영역 -->
+    <div id="pdf-content" class="p-6 overflow-y-auto flex-1">
+      <!-- 여기서부터 원천 이미지 + Grad-CAM을 나란히 배치할 준비 -->
+      <div class="flex gap-4">
+        <img id="modal-image" class="flex-1 rounded-2xl shadow-inner">
+        <!-- Grad-CAM 자리를 나중에 추가할 예정 -->
+        <img id="modal-gradcam" class="flex-1 rounded-2xl shadow-inner hidden">
+      </div>
+
+      <div class="flex justify-between items-center mt-6 mb-3">
+        <div id="modal-date" class="text-gray-500 text-sm"></div>
+        <div id="modal-disease"></div>
+      </div>
+      <div class="flex items-baseline gap-2 mb-3">
+        <span class="text-3xl font-bold text-green-600" id="modal-confidence"></span>
+        <span class="text-gray-500 text-sm">신뢰도</span>
+      </div>
+
+      <div id="modal-explanation" class="text-gray-700 leading-relaxed mb-6"></div>
+
+      <div id="probability-chart" class="mt-4">
+        <h4 class="text-sm font-medium text-gray-500 mb-3">클래스별 확률</h4>
+        <canvas id="prob-bar-chart" width="100%" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- 버튼 영역 -->
+    <div class="p-4 border-t flex gap-3 flex-shrink-0">
+      <button onclick="downloadPDF()" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-2xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2 text-sm">
+        <i class="fas fa-download"></i> PDF로 저장하기
+      </button>
+      <button onclick="closeModal()" class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-300 text-sm">
+        닫기
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<!-- Chart.js CDN 추가 (이 줄을 가장 위에 넣으세요) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+const STORAGE_KEY = 'strawberry_doctor_history';
+let historyData = [];
+let currentDetailId = null;
+
+function renderProbabilityChart(prob) {
+  const ctx = document.getElementById('prob-bar-chart');
+  if (!ctx) return;
+
+  try {
+    if (window.probChart) window.probChart.destroy();
+
+    const labels = ['정상', '역병', '시들음병', '잎끝마름', '황화'];
+    const data = [
+      prob.normal || 0,
+      prob.phytophthora || 0,
+      prob.wilt || 0,
+      prob.tipburn || 0,
+      prob.yellowing || 0
+    ];
+
+    window.probChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: '확률 (%)',
+          data: data,
+          backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#f59e0b', '#eab308'],
+          borderColor: '#ffffff',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } }
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("Chart.js 오류:", e);
+    // 차트 실패해도 모달은 열림
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadHistory();
+  renderHistory();
+
+  document.getElementById('search-input').addEventListener('input', renderHistory);
+  document.getElementById('filter-class').addEventListener('change', renderHistory);
+});
+
+function loadHistory() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  historyData = saved ? JSON.parse(saved) : [];
+}
+
+function saveHistory() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(historyData));
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('empty-state');
+  const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+  const filterClass = document.getElementById('filter-class').value;
+
+  let filtered = historyData.filter(item => {
+    const matchSearch = !searchTerm || 
+      item.disease.toLowerCase().includes(searchTerm) || 
+      item.date.includes(searchTerm) ||
+      (item.explanation && item.explanation.toLowerCase().includes(searchTerm));
+    const matchFilter = !filterClass || item.disease === filterClass;
+    return matchSearch && matchFilter;
+  });
+
+  list.innerHTML = '';
+
+  if (filtered.length === 0) {
+    empty.classList.remove('hidden');
+    document.getElementById('total-count').textContent = '0';
+    return;
+  }
+
+  empty.classList.add('hidden');
+  document.getElementById('total-count').textContent = filtered.length;
+
+  filtered.forEach(item => {
+    const cardHTML = `
+      <div class="history-card bg-white rounded-3xl shadow overflow-hidden cursor-pointer" onclick="viewDetail(${item.id})">
+        <div class="relative">
+          <img src="${item.gradcam}" class="thumbnail" style="object-fit: contain; background: #f8fafc;">
+          <div class="absolute top-3 right-3 bg-white px-3 py-1 rounded-2xl text-xs font-bold shadow">
+            ${item.confidence}%
+          </div>
+        </div>
+        <div class="p-5 flex-1 flex flex-col">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="inline-block px-3 py-1 text-xs font-medium rounded-2xl 
+                ${item.disease === '정상' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                ${item.disease}
+              </span>
+            </div>
+            <span class="text-xs text-gray-500">${item.date}</span>
+          </div>
+          <!-- 설명은 필요 없으면 빈칸으로 -->
+          <p class="mt-3 text-sm text-gray-600 flex-1">${item.explanation || ''}</p>
+        </div>
+      </div>
+    `;
+    list.innerHTML += cardHTML;
+  });
+}
+
+function viewDetail(id) {
+  const item = historyData.find(h => h.id === id);
+  if (!item) return;
+
+  currentDetailId = id;
+
+  // 원본 이미지 (왼쪽)
+  document.getElementById('modal-image').src = item.image;
+  
+  // Grad-CAM 이미지 (오른쪽)
+  const gradcamEl = document.getElementById('modal-gradcam');
+  if (item.gradcam) {
+    gradcamEl.src = item.gradcam;
+    gradcamEl.classList.remove('hidden');
+  }
+
+  document.getElementById('modal-date').textContent = item.date;
+  document.getElementById('modal-disease').innerHTML = `
+    <span class="${item.disease === '정상' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} px-4 py-1 rounded-2xl text-sm font-medium">
+      ${item.disease}
+    </span>`;
+  document.getElementById('modal-confidence').innerHTML = `${item.confidence}%`;
+
+  // document.getElementById('modal-explanation').textContent = item.explanation || '설명이 없습니다.';
+
+  // 바 차트 그리기
+  renderProbabilityChart(item.probabilities || {});
+
+  const modal = document.getElementById('detail-modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeModal() {
+  const modal = document.getElementById('detail-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  currentDetailId = null;
+}
+
+async function downloadPDF() {
+  const pdfContent = document.getElementById('pdf-content');
+  try {
+    const canvas = await html2canvas(pdfContent, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`딸기_진단_${new Date().toISOString().slice(0,10)}.pdf`);
+    closeModal();
+  } catch (err) {
+    alert('PDF 생성 중 오류가 발생했습니다.');
+  }
+}
+
+function clearAllHistory() {
+  if (confirm('모든 진단 이력을 삭제하시겠습니까?')) {
+    historyData = [];
+    saveHistory();
+    renderHistory();
+  }
+}
+
+</script>
+
+{% endblock %}

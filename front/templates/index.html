@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}홈페이지{% endblock %}
+
+{% block extra_css %}
+  
+  <style>
+   
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .hero-bg { background: linear-gradient(135deg, #2A9D8F 0%, #E63946 100%); }
+    .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card-hover:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15); }
+   
+    /* Grad-CAM 슬라이드 - 헤더 그라데이션 영역에 정확히 맞춤 */
+    .gradcam-slide {
+    height: 100% !important;
+    width: 100% !important;
+    object-fit: cover !important;      /* 그라데이션 영역을 정확히 채우되 넘치지 않음 */
+    object-position: center;
+    flex-shrink: 0;
+    }
+  
+    #gradcam-slider {
+      height: 787px !important;
+    }
+  
+    /* 가장 중요한 부분: hero 영역 자체에 overflow-hidden 강제 적용 */
+    .hero-section {                /* ← hero를 감싸는 div의 class명으로 바꾸기 */
+      overflow: hidden !important;
+      position: relative;
+    }
+  </style>
+
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<header id="hero-section" class="hero-bg text-white py-24">
+  <div class="max-w-7xl mx-auto px-8 text-center">
+    <!-- ==================== Grad-CAM 슬라이드 추가 ==================== -->
+    <div class="absolute inset-0 overflow-hidden z-0 opacity-30 pointer-events-none">
+      <div id="gradcam-slider" class="flex h-full w-full transition-transform duration-1000 ease-in-out">
+        <!-- 실제 이미지 파일명으로 교체하세요 -->
+        <img src="{{ gradcam1 }}" class="h-full w-screen object-cover flex-shrink-0" class="gradcam-slide" alt="gradcam1">
+        <img src="{{ gradcam2 }}" class="h-full w-screen object-cover flex-shrink-0" class="gradcam-slide" alt="gradcam2">
+        <img src="{{ gradcam3 }}" class="h-full w-screen object-cover flex-shrink-0" class="gradcam-slide" alt="gradcam3">
+        <img src="{{ gradcam4 }}" class="h-full w-screen object-cover flex-shrink-0" class="gradcam-slide" alt="gradcam4">
+        <img src="{{ gradcam5 }}" class="h-full w-screen object-cover flex-shrink-0" class="gradcam-slide" alt="gradcam5">
+        <img src="{{ gradcam6 }}" class="h-full w-screen object-cover flex-shrink-0" class="gradcam-slide" alt="gradcam6">
+      </div>
+    </div>
+    <!-- ==================== 슬라이드 끝 ==================== -->
+    <div class="inline-flex items-center gap-2 bg-white/20 text-white text-sm font-medium px-6 py-2 rounded-full mb-6 backdrop-blur-md">
+      <span class="relative flex h-3 w-3">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+      </span>
+      2026년 3월 기준 Baseline 완료
+    </div>
+    <h1 class="text-6xl font-bold tracking-tight leading-none mb-4">
+      AI가 알려주는<br>딸기 잎 건강 진단
+    </h1>
+    <p class="text-2xl text-white/90 font-light max-w-2xl mx-auto">
+      설향 딸기 잎 사진 한 장으로<br>정상 · 역병 · 시들음병 · 잎끝마름 · 황화를 1초 만에 진단
+    </p>
+    <div class="mt-10 flex justify-center gap-4">
+      <a href="/training/" 
+         class="inline-flex items-center gap-3 bg-white text-green-800 px-10 py-5 rounded-3xl text-xl font-semibold hover:scale-105 transition-all shadow-lg">
+        <i class="fas fa-camera"></i>
+        지금 진단 시작하기
+      </a>
+      <a href="/history/" 
+         class="inline-flex items-center gap-3 border border-white/80 text-white px-8 py-5 rounded-3xl text-xl font-medium hover:bg-white/10 transition-all">
+        <i class="fas fa-history"></i>
+        진단 이력 보기
+      </a>
+    </div>
+    <div class="mt-16 flex justify-center items-center gap-12 text-sm opacity-90">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-check-circle text-2xl"></i>
+        <div>
+          <div class="font-semibold">Val Accuracy</div>
+          <div class="text-4xl font-bold">95.60%</div>
+        </div>
+      </div>
+      <div>•</div>
+      <div>172,037장 AI Hub 데이터</div>
+      <div>•</div>
+      <div>EfficientNet-B3 + Grad-CAM</div>
+      <div>•</div>
+      <div>bbox crop 적용</div>
+    </div>
+  </div>
+</header>
+
+<!-- Overview -->
+<section class="max-w-7xl mx-auto px-8 py-20">
+  <div class="grid md:grid-cols-2 gap-16 items-center">
+    <div>
+      <span class="text-green-600 font-medium">AI Hub × EfficientNet-B3</span>
+      <h2 class="text-4xl font-semibold text-gray-800 mt-2 leading-tight">
+        딸기 질병을<br>과학적으로 진단합니다
+      </h2>
+      <p class="mt-6 text-gray-600 text-lg leading-relaxed">
+        설향 품종 딸기 잎 이미지를 분석해<br>
+        5가지 클래스(정상·역병·시들음병·잎끝마름·황화)를 정확히 구분합니다.
+      </p>
+      <ul class="mt-8 space-y-4 text-gray-700">
+        <li class="flex gap-3 items-start"><span class="text-2xl text-green-500"><img src='https://i.ifh.cc/l7f122.png' width="27.7px" border='0'></span> <span>bbox crop + context crop 병반과 주변 문맥 동시 반영
+        </span></li>
+        <li class="flex gap-3 items-start"><span class="text-2xl text-green-500"><img src='https://i.ifh.cc/wh0PGc.png' width="27.7px" border='0'></span> <span>WeightedRandomSampler로 클래스 불균형 해결</span></li>
+        <li class="flex gap-3 items-start"><span class="text-2xl text-green-500"><img src='https://i.ifh.cc/pa39ab.png' width="27.7px" border='0'></span> <span>Grad-CAM으로 모델 판단 근거를 시각화</span></li>
+      </ul>
+    </div>
+    <div class="bg-white rounded-3xl shadow-xl p-8">
+      <img id="latest-gradcam" 
+         src="" 
+         alt="딸기 잎 Grad-CAM" 
+         class="rounded-2xl shadow-inner w-full">
+      <p class="text-center text-sm text-gray-500 mt-4">AI가 집중한 병반 부위 (최근 Grad-CAM)</p>
+    </div>
+  </div>
+</section>
+
+<!-- Pipeline -->
+<section class="bg-white py-20">
+  <div class="max-w-7xl mx-auto px-8">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-semibold">전체 연구 파이프라인</h2>
+      <p class="text-gray-500 mt-2">데이터 준비 → 모델 학습까지 한눈에</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+      <div class="text-center card-hover bg-gray-50 rounded-3xl p-6">
+        <div class="text-4xl mb-4">
+          <i class="fa-solid fa-server"></i>
+        </div>
+        <div class="font-medium">① 데이터 세팅</div>
+        <div class="text-xs text-gray-500 mt-1">AI Hub zip + JSON 라벨링</div>
+      </div>
+      <div class="text-center card-hover bg-gray-50 rounded-3xl p-6 flex flex-col items-center">
+        <div class="text-4xl mb-4 flex items-center">
+          <img src='https://i.ifh.cc/F0CVyh.png' width="45px" border='0'>
+        </div>
+        <div class="font-medium">② EDA</div>
+        <div class="text-xs text-gray-500 mt-1">클래스 불균형 분석</div>
+      </div>
+      <div class="text-center card-hover bg-gray-50 rounded-3xl p-6 flex flex-col items-center">
+        <div class="text-4xl mb-4 flex items-center">
+          <img src='https://i.ifh.cc/MhJ9OV.png' width="45px" border='0'>
+        </div>
+        <div class="font-medium">③ 전처리</div>
+        <div class="text-xs text-gray-500 mt-1">bbox crop 적용</div>
+      </div>
+      <div class="text-center card-hover bg-green-100 rounded-3xl p-6 ring-2 ring-green-600 flex flex-col items-center">
+        <div class="text-4xl mb-4 flex items-center">
+          <img src='https://i.ifh.cc/o5bxbv.png' width="45px" border='0'>
+        </div>
+        <div class="font-medium text-green-700">④ 모델 학습</div>
+        <div class="text-xs text-green-600 mt-1">EfficientNet-B3 Baseline</div>
+        <div class="text-2xl font-bold text-green-700 mt-3">95.60%</div>
+      </div>
+      <div class="text-center card-hover bg-gray-50 rounded-3xl p-6 flex flex-col items-center">
+        <div class="text-4xl mb-4 flex items-center">
+          <img src='https://i.ifh.cc/G5ZnwJ.png' width="45px" border='0'>
+        </div>
+        <div class="font-medium">⑤ 평가</div>
+        <div class="text-xs text-gray-500 mt-1">F1-score · 혼동행렬</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Achievements -->
+<section class="max-w-7xl mx-auto px-8 py-20 bg-gray-50">
+  <div class="grid md:grid-cols-3 gap-8">
+    <div class="bg-white rounded-3xl p-8 card-hover">
+      <div class="text-green-600 text-sm font-medium mb-2">현재 진행 단계</div>
+      <h3 class="text-2xl font-semibold">① 데이터 준비 ~ ⑤ 모델 학습 (Baseline) 완료</h3>
+      <p class="text-5xl font-bold text-green-700 mt-8">95.60%</p>
+      <p class="text-gray-500">Val Accuracy (CPU / 1,000장 / 3에폭)</p>
+    </div>
+    <div class="bg-white rounded-3xl p-8 card-hover">
+      <div class="text-green-600 text-sm font-medium mb-2">사용 기술</div>
+      <div class="space-y-6 text-lg">
+        <div class="flex justify-between"><span class="font-medium">모델</span><span class="text-gray-500">EfficientNet-B3</span></div>
+        <div class="flex justify-between"><span class="font-medium">전처리</span><span class="text-gray-500">HSV 마스킹</span></div>
+        <div class="flex justify-between"><span class="font-medium">설명 가능성</span><span class="text-gray-500">Grad-CAM</span></div>
+        <div class="flex justify-between"><span class="font-medium">프레임워크</span><span class="text-gray-500">PyTorch 2.11</span></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-3xl p-8 card-hover flex flex-col">
+      <div class="text-green-600 text-sm font-medium mb-2">데이터셋</div>
+      <div class="flex-1">
+        <p class="text-6xl font-bold text-green-700">172,037장</p>
+        <p class="text-gray-600">AI Hub 시설작물(딸기) 2022 설향 품종</p>
+      </div>
+      <div class="text-xs text-gray-500 mt-auto">정상 38.6% · 시들음병 24.7% · 역병 17.6% · 잎끝마름 10.3% · 황화 8.1%</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="bg-gradient-to-r from-green-700 to-red-600 text-white py-16">
+  <div class="max-w-7xl mx-auto px-8 text-center">
+    <p class="text-3xl font-light">연구는 계속됩니다</p>
+    <h2 class="text-5xl font-semibold mt-4">지금 직접 딸기 잎을 진단해 보세요</h2>
+    <a href="/training/" 
+       class="mt-8 inline-flex items-center gap-4 bg-white text-green-800 px-12 py-6 rounded-3xl text-2xl font-semibold hover:scale-105 transition-transform">
+      <i class="fas fa-leaf"></i>
+      진단 시작하기
+    </a>
+    <p class="text-white/70 mt-6 text-sm">※ 데모 버전 • 실제 Django + MariaDB 버전은 개발 중</p>
+  </div>
+</section>
+
+{% block extra_js %}
+
+<script>
+
+
+// Grad-CAM 슬라이드 (7초마다 오른쪽→왼쪽 슬라이드)
+let currentSlide = 0;
+const slider = document.getElementById('gradcam-slider');
+const totalSlides = 6;   // 위에 img 태그 개수와 동일하게 맞춰주세요
+
+function nextSlide() {
+  currentSlide = (currentSlide + 1) % totalSlides;
+  slider.style.transform = `translateX(-${currentSlide * 100}%)`;
+}
+
+// 7초마다 자동 슬라이드
+setInterval(nextSlide, 7000);
+
+// 처음 로드될 때도 첫 슬라이드 표시
+window.addEventListener('load', () => {
+  slider.style.transition = 'transform 1s ease-in-out';
+});
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const latest = localStorage.getItem('latest_gradcam');
+    if (latest) {
+        document.getElementById('latest-gradcam').src = latest;
+    }
+});
+
+</script>
+
+{% endblock %}
+
+{% endblock %}

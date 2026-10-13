@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}딸기 닥터 | AI 딸기 질병 진단{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 로컬 css -->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <!-- 아이콘 css 불러오기 -->
+    <link rel="stylesheet" href="{% static 'webfonts/css/all.min.css' %}">
+    <style>
+      #Sort_Interval {
+        display: flex;
+        gap: 0px;
+      }
+
+      #strawberry_icon_bass {
+        width:60px;
+        }
+    </style>
+    <!-- 공용으로 css 추가 불러오기 -->
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body class="bg-gray-50 font-sans">
+    
+    <!-- Navbar (모든 페이지에 동일하게 적용) -->
+    <nav class="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between">
+        <!-- 로고 클릭 → 홈페이지(index.html)로 이동 -->
+        <a href="/" id="" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <span class="text-4xl"><img id="strawberry_icon_bass" src="https://png.pngtree.com/recommend-works/png-clipart/20251104/ourmid/pngtree-strawberry-icon-png-image_17777340.webp"></span>
+          <h1 class="text-2xl font-semibold text-green-800">딸기 닥터</h1>
+        </a>
+        
+        <div class="flex items-center gap-8 text-sm font-medium">
+          <a href="/training/" class="text-gray-600 hover:text-green-700 transition-colors flex items-center gap-1">
+            <i class="fas fa-camera"></i> 진단하기
+          </a>
+          <a href="/history/" class="text-gray-600 hover:text-green-700 transition-colors">진단 이력</a>
+          <a href="/myfarm/" class="text-gray-600 hover:text-green-700 transition-colors">내 농장</a>
+          <a href="/report/" class="text-gray-600 hover:text-green-700 transition-colors">연구 보고서</a>
+        </div>
+      </div>
+    </nav>
+    
+    <!-- 자식 템플릿이 채울 영역 -->
+    <main class="w-full">
+      {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t py-12">
+          <div class="max-w-7xl mx-auto px-8 text-center text-gray-400 text-sm">
+            © 2026 Strawberry Doctor Technical Report<br>
+            AI Hub 시설작물(딸기) 데이터셋 • EfficientNet-B3 Baseline • 배포일 2026.05.06
+          </div>
+        </footer>
+        
+        <!-- 공용으로 스크립트 추가 불러오기 -->
+        {% block extra_js %}{% endblock %}
+
+    </body>
+</html>
